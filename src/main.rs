@@ -24,13 +24,11 @@ fn handle_error<T>(e: co::ERROR, msg:&str) -> Result<T, String> {
 }
 
 const SHIFT: i32 = 2;
+const FAST_SEC: u64 = 5;
+const SLOW_SEC: u64 = 30;
 
-fn handle_mouse_coords(x: i32, y: i32, zig: bool, secs: u64) {
-    let mut shift = SHIFT;
-    if zig {
-        shift *= -1;
-    }
-
+fn handle_mouse_coords(x: i32, y: i32, zig: bool, secs: u64) -> bool {
+    let shift = if zig { SHIFT * -1 } else { SHIFT };
     let (x, y) = (x + shift, y + shift);
     match move_mouse(x, y) {
         Ok(()) => println!(
@@ -41,6 +39,7 @@ fn handle_mouse_coords(x: i32, y: i32, zig: bool, secs: u64) {
     }
 
     thread::sleep(Duration::from_secs(secs));
+    !zig
 }
 
 fn calc_dist(prev_x: i32, prev_y: i32, x: i32, y: i32) -> i32 {
@@ -48,17 +47,16 @@ fn calc_dist(prev_x: i32, prev_y: i32, x: i32, y: i32) -> i32 {
 }
 
 fn main() {
-    let mut zig = true;
-    let (mut prev_x, mut prev_y) = get_mouse_pos().unwrap();
+    let mut zig: bool = true;
+    let (mut prev_x, mut prev_y) = get_mouse_pos().unwrap_or_default();
     loop {
         match get_mouse_pos() {
             Ok((x, y)) => {
                 let distance = calc_dist(prev_x, prev_y, x, y);
                 println!("distance {distance}");
                 (prev_x, prev_y) = (x, y);
-                let secs = if distance == 2 { 5 } else { 30 };
-                handle_mouse_coords(x, y, zig, secs);
-                zig = !zig;
+                let secs = if distance <= 2 { FAST_SEC } else { SLOW_SEC };
+                zig = handle_mouse_coords(x, y, zig, secs);
             }
             Err(e) => {
                 println!("{}", e);
