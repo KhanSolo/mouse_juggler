@@ -1,27 +1,26 @@
 use std::thread;
+use std::fmt::Write as _;
 use std::time::Duration;
-use winapi::shared::windef::POINT;
-use winapi::um::winuser::{GetCursorPos, SetCursorPos};
+use winsafe::{self as w, co, gui, GetCursorPos, SetCursorPos};
 
 fn move_mouse(x: i32, y: i32) -> Result<(), String> {
-    unsafe {
-        if SetCursorPos(x, y) == 0 {
-            Err("SetCursorPos failed".into())
-        } else {
-            Ok(())
-        }
+    match SetCursorPos(x, y) {
+        Ok(_) => Ok(()),
+        Err(e) => handle_error(e, "SetCursorPos failed")
     }
 }
 
 fn get_mouse_pos() -> Result<(i32, i32), String> {
-    unsafe {
-        let mut point = POINT { x: 0, y: 0 };
-        if GetCursorPos(&mut point) == 0 {
-            Err("GetCursorPos failed".into())
-        } else {
-            Ok((point.x, point.y))
-        }
-    }
+     match GetCursorPos() {
+        Ok(p) => Ok((p.x, p.y)),
+        Err(e) => handle_error(e, "GetCursorPos failed")
+     }
+}
+
+fn handle_error<T>(e: co::ERROR, msg:&str) -> Result<T, String> {
+    let mut s = String::new();
+    write!(&mut s, "{} {}", msg, e).unwrap();
+    Err(s)
 }
 
 const SHIFT: i32 = 2;
@@ -50,7 +49,7 @@ fn calc_dist(prev_x: i32, prev_y: i32, x: i32, y: i32) -> i32 {
 
 fn main() {
     let mut zig = true;
-    let (mut prev_x, mut prev_y) = (0, 0);
+    let (mut prev_x, mut prev_y) = get_mouse_pos().unwrap();
     loop {
         match get_mouse_pos() {
             Ok((x, y)) => {
