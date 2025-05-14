@@ -1,7 +1,13 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod my_window;
+
+use winsafe::{prelude::*, co, AnyResult, HWND, GetCursorPos, SetCursorPos};
+use my_window::MyWindow;
+
 use std::thread;
 use std::fmt::Write as _;
 use std::time::Duration;
-use winsafe::{self as w, co, gui, GetCursorPos, SetCursorPos};
 
 fn move_mouse(x: i32, y: i32) -> Result<(), String> {
     match SetCursorPos(x, y) {
@@ -46,7 +52,7 @@ fn calc_dist(prev_x: i32, prev_y: i32, x: i32, y: i32) -> i32 {
     (((prev_x - x) * (prev_x - x) + (prev_y - y) * (prev_y - y)) as f32).sqrt() as i32
 }
 
-fn main() {
+fn main1() {
     let mut zig: bool = true;
     let (mut prev_x, mut prev_y) = get_mouse_pos().unwrap_or_default();
     loop {
@@ -64,4 +70,19 @@ fn main() {
             }
         }
     }
+}
+
+
+
+fn main() {
+	if let Err(e) = run_app() {
+		HWND::NULL.MessageBox(
+			&e.to_string(), "Uncaught error", co::MB::ICONERROR).unwrap();
+	}
+}
+
+fn run_app() -> AnyResult<i32> {
+	MyWindow::new() // create our main window...
+		.run()       // ...and run it
+		.map_err(|err| err.into())
 }
