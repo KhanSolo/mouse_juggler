@@ -2,7 +2,8 @@
 
 mod my_window;
 
-use winsafe::{prelude::*, co, AnyResult, HWND, GetCursorPos, SetCursorPos};
+use winsafe::{prelude::*, co, AnyResult, HWND};
+use winsafe::{GetCursorPos, SetCursorPos};
 use my_window::MyWindow;
 
 use std::thread;
@@ -71,8 +72,6 @@ fn main1() {
         }
     }
 }
-
-
 
 fn main() {
 	if let Err(e) = run_app() {
