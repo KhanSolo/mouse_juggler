@@ -1,36 +1,19 @@
 use std::io::{self, Read};
 use std::sync::mpsc;
 use std::thread::{self, JoinHandle};
-use std::time::{Duration};
-use std::fmt::Write;
-use winsafe::{/*self as w,*/ co, /*gui,*/ GetCursorPos, SetCursorPos};
+use std::time::Duration;
+use calc::calc_dist;
+use mouse::{get_mouse_pos, move_mouse};
 
-fn move_mouse(x: i32, y: i32) -> Result<(), String> {
-    match SetCursorPos(x, y) {
-        Ok(_) => Ok(()),
-        Err(e) => handle_error(e, "SetCursorPos failed"),
-    }
-}
-
-fn get_mouse_pos() -> Result<(i32, i32), String> {
-    match GetCursorPos() {
-        Ok(p) => Ok((p.x, p.y)),
-        Err(e) => handle_error(e, "GetCursorPos failed")
-     }
-}
-
-fn handle_error<T>(e: co::ERROR, msg:&str) -> Result<T, String> {
-    let mut s = String::new();
-    write!(&mut s, "{} {}", msg, e).unwrap();
-    Err(s)
-}
+mod calc;
+mod mouse;
 
 const SHIFT: i32 = 2;
 const THRESHOLD: i32 = 10;
 const SHORT: u64 = 5;
 const LONG: u64 = 30;
 
-fn handle_mouse_coords(x: i32, y: i32, zig: bool) -> bool{
+fn handle_mouse_coords(x: i32, y: i32, zig: bool) -> bool {
     let mut shift = SHIFT;
     if zig {
         shift *= -1;
@@ -47,10 +30,6 @@ fn handle_mouse_coords(x: i32, y: i32, zig: bool) -> bool{
     !zig
 }
 
-fn calc_dist(prev_x: i32, prev_y: i32, x: i32, y: i32) -> i32 {
-    (((prev_x - x) * (prev_x - x) + (prev_y - y) * (prev_y - y)) as f32).sqrt() as i32
-}
-
 fn main() -> Result<(), String> {
     let (stop_tx, stop_rx) = mpsc::channel::<()>();
     let handle: JoinHandle<Result<(), String>> = thread::spawn(move || {
@@ -64,7 +43,6 @@ fn main() -> Result<(), String> {
             }
 
             let (x, y) = get_mouse_pos()?;
-
             let distance = calc_dist(prev_x, prev_y, x, y);
             println!("distance {distance}");            
             (prev_x, prev_y) = (x, y);
@@ -82,10 +60,16 @@ fn main() -> Result<(), String> {
     println!("Press enter for exit...");     
 
     io::stdin().read(&mut [0u8]).unwrap(); // Waiting for a key press
-    stop_tx.send(()).unwrap(); // Sending completion signal
+
+    // Sending completion signal
+    match stop_tx.send(()) {
+        Ok(()) => println!("Completion signal has been sent to thread"),
+        Err(e) => println!("Some error happened on sending: {e}"),
+    }
+
     match handle.join() {
         Ok(Ok(())) => {
-            println!("THread succeeded!");
+            println!("Thread succeeded!");
             return Ok(());
         },
         Ok(Err(e)) => {
